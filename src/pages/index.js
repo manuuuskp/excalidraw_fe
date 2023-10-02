@@ -1,6 +1,6 @@
-import Menu from "@/components/Menu"
-import Toolbox from "@/components/Toolbox"
-import Board from "@/components/Board"
+import Menu from "@/components/menu"
+import Toolbox from "@/components/toolbox"
+import Board from "@/components/board"
 
 export default function Home() {
   return (
