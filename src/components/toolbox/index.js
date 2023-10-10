@@ -3,25 +3,25 @@ import cx from 'classnames';
 
 import styles from './index.module.css'
 
-import { COLORS, MENU_ITEMS } from '@/constants'
+import { COLORS, MENU_ITEMS, SUB_MENU_ITEMS } from '@/constants'
 import {changeColor, changeBrushSize } from '@/slice/toolboxSlice'
 import { socket } from "@/socket";
 
 const Toolbox = () => {
-    const dispatch = useDispatch()
-    const activeMenuItem = useSelector((state) => state.menu.activeMenuItem)
-    const showStrokeToolOption = activeMenuItem === MENU_ITEMS.PENCIL
-    const showBrushToolOption = activeMenuItem === MENU_ITEMS.PENCIL || activeMenuItem === MENU_ITEMS.ERASER
-    const {color, size} = useSelector((state) => state.toolbox[activeMenuItem])
+    const dispatch = useDispatch();
+    const activeMenuItem = useSelector((state) => state.menu.activeSubMenuItem);
+    const showStrokeToolOption = activeMenuItem === SUB_MENU_ITEMS.PENCIL || activeMenuItem === SUB_MENU_ITEMS.HIGHLIGHTER;
+    const showBrushToolOption = activeMenuItem === SUB_MENU_ITEMS.PENCIL || activeMenuItem === SUB_MENU_ITEMS.HIGHLIGHTER;
+    const {color, size} = useSelector((state) => state.toolbox[activeMenuItem]);
 
     const updateBrushSize = (e) => {
-        dispatch(changeBrushSize({item: activeMenuItem, size: e.target.value}))
-        socket.emit('changeConfig', {color, size: e.target.value })
+        dispatch(changeBrushSize({item: activeMenuItem, size: e.target.value}));
+        socket.emit('changeConfig', {color, size: e.target.value });
     }
 
     const updateColor = (newColor) => {
-        dispatch(changeColor({item: activeMenuItem, color: newColor}))
-        socket.emit('changeConfig', {color: newColor, size })
+        dispatch(changeColor({item: activeMenuItem, color: newColor}));
+        socket.emit('changeConfig', {color: newColor, size });
     }
     
     return (<div className={styles.toolboxContainer}>
