@@ -22,15 +22,24 @@
     transform: translate(0,-50%);
 }
 
-.menuToolsContainer, .menuUtilityContainer {
+.menuToolsContainer {
     display: flex;
     flex-direction: column;
     background-color: #fff;
     padding: 10px;
     border-radius: 10px;
     margin-top: 16px;
+    margin-left: 75px;
 }
 
-.menuUtilityContainer {
-    margin-left: 8px;
+.colorOuter {
+    height: 35px;
+    width: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    border: 2px solid #bbb;
+    align-self: center;
+    margin-top: 8px;
 }

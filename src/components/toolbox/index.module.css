@@ -1,8 +1,19 @@
 .toolboxContainer {
-    @apply p-5 absolute top-1/4 left-5 w-64 rounded-md;
+    position: absolute;
     box-shadow: theme('colors.shadow1');
     border: 1px solid theme('colors.border1');
     background-color: theme('colors.background1');
+
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    top: 50%;
+    transform: translate(0,-50%);
+    margin-left: 150px;
+    margin-top: 50px;
+    padding: 15px;
 
     .toolItem {
         @apply mb-5;
