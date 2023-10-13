@@ -12,7 +12,7 @@ const initialState = {
     },
     [MENU_ITEMS.ERASER]: {
         color: COLORS.WHITE,
-        size: 3
+        size: 10
     },
     [MENU_ITEMS.SQUARE]: {
         color: COLORS.BLACK,

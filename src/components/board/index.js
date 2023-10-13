@@ -15,6 +15,7 @@ const Board = () => {
     const historyPointer = useRef(0)
     const startX = useRef(null);
     const startY = useRef(null);
+    const rectArr = useRef([]);
     const shouldDraw = useRef(false)
     const {activeMenuItem, actionMenuItem, activeSubMenuItem} = useSelector((state) => state.menu)
     const activeToolBoxItem = useSelector((state) => state.toolbox[activeSubMenuItem])
@@ -50,6 +51,10 @@ const Board = () => {
                 context.strokeStyle = `${color}10`
             } else {
                 context.strokeStyle = color;
+            }
+            context.globalCompositeOperation = 'source-over';
+            if(activeSubMenuItem === SUB_MENU_ITEMS.ERASER) {
+                context.globalCompositeOperation = 'destination-out';
             }
             context.lineWidth = size;
         }
@@ -114,10 +119,21 @@ const Board = () => {
         }
 
         const drawRect = (x, y) => {
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
             const width = x - startX.current;
             const height = y - startY.current;
-
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.putImageData(imageData,0,0);
+            context.beginPath();
             context.strokeRect(startX.current, startY.current, width, height);
+            // context.stroke();
+        }
+
+        const drawCircle = (x, y) => {
+            const radius = x - startX.current;
+            // context.arc(startX.current, startY.current, 30, 0, 2 * Math.PI);
+            context.arc(startX.current, startY.current, radius, 0, 2*Math.PI, false)
+            context.stroke();
         }
 
         const drawLine = (x, y) => {
@@ -129,21 +145,23 @@ const Board = () => {
             } else if(activeMenuItem === MENU_ITEMS.SQUARE) {
                 drawRect(x, y);
                 // context.strokeRect(x, y, 100, 100);
+            } else if(activeMenuItem === MENU_ITEMS.CIRCLE) {
+                drawCircle(x, y);
             }
             context.stroke();
         }
 
         const handleMouseDown = (e) => {
             shouldDraw.current = true
-            startX.current = e.clientX;
-            startY.current = e.clientY;
+            startX.current = e.clientX - canvas.offsetLeft;;
+            startY.current = e.clientY - canvas.offsetTop;
             beginPath(e.clientX, e.clientY);
             socket.emit('beginPath', {x: e.clientX, y: e.clientY})
         }
 
         const handleMouseMove = (e) => {
             if (!shouldDraw.current) return
-            drawLine(e.clientX, e.clientY, context)
+            drawLine(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop, context)
             socket.emit('drawLine', {x: e.clientX, y: e.clientY})
         }
 

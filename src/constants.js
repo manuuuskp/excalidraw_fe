@@ -9,6 +9,7 @@ const COLORS = {
 }
 
 const MENU_ITEMS = {
+    POINTER: 'POINTER',
     PENCIL: 'PENCIL',
     SQUARE: 'SQUARE',
     CIRCLE: 'CIRCLE',

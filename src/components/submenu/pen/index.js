@@ -8,7 +8,7 @@ import {
   faHighlighter,
 } from "@fortawesome/free-solid-svg-icons";
 import { MENU_ITEMS, SUB_MENU_ITEMS } from "@/constants";
-import { subMenuItemClick } from "@/slice/menuSlice";
+import { subMenuItemClick, menuItemClick } from "@/slice/menuSlice";
 
 import styles from "./penSubMenu.module.css";
 
@@ -17,7 +17,12 @@ const PenSubMenu = () => {
   const activeMenuItem = useSelector((state) => state.menu.activeSubMenuItem);
   const activeMenuToolbox = useSelector((state) => state.toolbox[activeMenuItem]);
   const handleSubMenuClick = (itemName) => {
-    dispatch(subMenuItemClick(itemName));
+    if(itemName === SUB_MENU_ITEMS.CLOSE) {
+      dispatch(menuItemClick(MENU_ITEMS.POINTER));
+      dispatch(subMenuItemClick(null));
+    } else {
+      dispatch(subMenuItemClick(itemName));
+    }
   };
   return (
     <div className={styles.menuContainer}>

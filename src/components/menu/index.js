@@ -9,6 +9,7 @@ import {
   faFileArrowDown,
   faSquare,
   faCircle,
+  faArrowPointer
 } from "@fortawesome/free-solid-svg-icons";
 
 import styles from "./index.module.css";
@@ -34,6 +35,14 @@ const Menu = () => {
     <>
     <div className={styles.menuContainer}>
       <div className={styles.menuToolsContainer}>
+      <div
+          className={cx(styles.iconWrapper, {
+            [styles.active]: activeMenuItem === MENU_ITEMS.POINTER,
+          })}
+          onClick={() => handleMenuClick(MENU_ITEMS.POINTER)}
+        >
+          <FontAwesomeIcon icon={faArrowPointer} className={styles.icon} />
+        </div>
         <div
           className={cx(styles.iconWrapper, {
             [styles.active]: activeMenuItem === MENU_ITEMS.PENCIL,
@@ -57,14 +66,6 @@ const Menu = () => {
           onClick={() => handleMenuClick(MENU_ITEMS.CIRCLE)}
         >
           <FontAwesomeIcon icon={faCircle} className={styles.icon} />
-        </div>
-        <div
-          className={cx(styles.iconWrapper, {
-            [styles.active]: activeMenuItem === MENU_ITEMS.ERASER,
-          })}
-          onClick={() => handleMenuClick(MENU_ITEMS.ERASER)}
-        >
-          <FontAwesomeIcon icon={faEraser} className={styles.icon} />
         </div>
       </div>
       <div className={styles.menuUtilityContainer}>
