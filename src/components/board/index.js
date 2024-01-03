@@ -1,204 +1,309 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { useSelector, useDispatch } from 'react-redux'
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 
 import { MENU_ITEMS, SUB_MENU_ITEMS } from "@/constants";
-import { actionItemClick } from '@/slice/menuSlice'
+import { actionItemClick } from "@/slice/menuSlice";
 
 import { socket } from "@/socket";
 
 import classes from "./index.module.css";
+import { addRectangle } from "@/slice/drawItemsSlice";
 
 const Board = () => {
-    const dispatch = useDispatch()
-    const canvasRef = useRef(null)
-    const drawHistory = useRef([])
-    const historyPointer = useRef(0)
-    const startX = useRef(null);
-    const startY = useRef(null);
-    const rectArr = useRef([]);
-    const shouldDraw = useRef(false)
-    const {activeMenuItem, actionMenuItem, activeSubMenuItem} = useSelector((state) => state.menu)
-    const activeToolBoxItem = useSelector((state) => state.toolbox[activeSubMenuItem])
+  const dispatch = useDispatch();
+  const [rectItems, setRectItems] = useState([]);
+  const canvasRef = useRef(null);
+  const drawHistory = useRef([]);
+  const historyPointer = useRef(0);
+  const startX = useRef(null);
+  const startY = useRef(null);
+  const rectArr = useRef([]);
+  const circleArr = useRef([]);
+  const lineArr = useRef([]);
+  const shouldDraw = useRef(false);
+  const { activeMenuItem, actionMenuItem, activeSubMenuItem } = useSelector(
+    (state) => state.menu
+  );
+  const activeToolBoxItem = useSelector(
+    (state) => state.toolbox[activeSubMenuItem]
+  );
 
+  const renderInitialBackStroke = () => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
 
-    useEffect(() => {
-        if (!canvasRef.current) return
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d')
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-        if (actionMenuItem === MENU_ITEMS.DOWNLOAD) {
-            const URL = canvas.toDataURL()
-            const anchor = document.createElement('a')
-            anchor.href = URL
-            anchor.download = 'sketch.jpg'
-            anchor.click()
-        } else  if (actionMenuItem === MENU_ITEMS.UNDO || actionMenuItem === MENU_ITEMS.REDO) {
-            if(historyPointer.current > 0 && actionMenuItem === MENU_ITEMS.UNDO) historyPointer.current -= 1
-            if(historyPointer.current < drawHistory.current.length - 1 && actionMenuItem === MENU_ITEMS.REDO) historyPointer.current += 1
-            const imageData = drawHistory.current[historyPointer.current]
-            context.putImageData(imageData, 0, 0)
-        }
-        dispatch(actionItemClick(null))
-    }, [actionMenuItem, dispatch])
+    let ctx = canvas.getContext("2d");
+    let s = 90;
 
-    useEffect(() => {
-        if (!canvasRef.current) return
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d')
+    ctx.strokeStyle = "lightgrey";
+    ctx.beginPath();
+    for (var x = 0; x <= window.innerWidth; x += s) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, window.innerHeight);
+    }
+    for (var y = 0; y <= window.innerHeight; y += s) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(window.innerWidth, y);
+    }
+    ctx.stroke();
+  };
 
-        const changeConfig = (color, size) => {
-            if(activeSubMenuItem === SUB_MENU_ITEMS.HIGHLIGHTER) {
-                context.strokeStyle = `${color}10`
-            } else {
-                context.strokeStyle = color;
-            }
-            context.globalCompositeOperation = 'source-over';
-            if(activeSubMenuItem === SUB_MENU_ITEMS.ERASER) {
-                context.globalCompositeOperation = 'destination-out';
-            }
-            context.lineWidth = size;
-        }
+  const redrawLocalRectangle = (context) => {
+    rectArr.current.forEach(({ x, y, width, height }) => {
+      console.log(x, y, width, height);
+      context.strokeRect(x, y, width, height);
+    });
+  };
 
-        const handleChangeConfig = (config) => {
-            changeConfig(config.color, config.size)
-        }
-        changeConfig(activeToolBoxItem?.color, activeToolBoxItem?.size)
-        socket.on('changeConfig', handleChangeConfig)
+  const redrawLocalCircle = (context) => {
+    circleArr.current.forEach(({ x, y, radius }) => {
+      context.moveTo(x, y);
+      context.beginPath();
+      context.arc(x, y, radius, 0, 2 * Math.PI, false);
+      context.stroke();
+    });
+  };
 
-        return () => {
-            socket.off('changeConfig', handleChangeConfig)
-        }
-    }, [activeToolBoxItem?.color, activeToolBoxItem?.size, activeSubMenuItem]);
+  const redrawLocalLine = (context) => {
+    lineArr.current.forEach(({ startX, startY, endX, endY }) => {
+      context.moveTo(startX, startY);
+      context.lineTo(endX, endY);
+    });
+  };
 
-    useEffect(() => {
-        if(!canvasRef.current) return;
+  const pushDrawItem = (e, canvas) => {
+    const endX = e.clientX - canvas.offsetLeft;
+    const endY = e.clientY - canvas.offsetTop;
+    if (activeMenuItem === MENU_ITEMS.SQUARE) {
+      const rectObj = {
+        x: startX.current,
+        y: startY.current,
+        width: endX - startX.current,
+        height: endY - startY.current,
+      };
+      dispatch(addRectangle(rectObj));
+      //   handleRectItems(rectObj);
+      rectArr.current.push(rectObj);
+      setRectItems([...rectItems, rectObj]);
+      // setRectItems((prev) => prev.push(rectObj));
+    } else if (activeMenuItem === MENU_ITEMS.CIRCLE) {
+      const radius = endX - startX.current;
+      const circleObj = {
+        x: startX.current,
+        y: startY.current,
+        radius,
+      };
+      circleArr.current.push(circleObj);
+    } else if (activeMenuItem === MENU_ITEMS.PENCIL) {
+      const lineObj = {
+        startX: startX.current,
+        startY: startY.current,
+        endX,
+        endY,
+      };
+      lineArr.current.push(lineObj);
+    }
+  };
 
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
 
-        if(activeSubMenuItem === SUB_MENU_ITEMS.HIGHLIGHTER) {
-            console.log('globalAlpha')
-            context.globalAlpha = 0.5;
-        } else {
-            context.globalAlpha = 1;
-        }
-    }, [activeSubMenuItem]);
+    if (actionMenuItem === MENU_ITEMS.DOWNLOAD) {
+      const URL = canvas.toDataURL();
+      const anchor = document.createElement("a");
+      anchor.href = URL;
+      anchor.download = "sketch.jpg";
+      anchor.click();
+    } else if (
+      actionMenuItem === MENU_ITEMS.UNDO ||
+      actionMenuItem === MENU_ITEMS.REDO
+    ) {
+      if (historyPointer.current > 0 && actionMenuItem === MENU_ITEMS.UNDO)
+        historyPointer.current -= 1;
+      if (
+        historyPointer.current < drawHistory.current.length - 1 &&
+        actionMenuItem === MENU_ITEMS.REDO
+      )
+        historyPointer.current += 1;
+      const imageData = drawHistory.current[historyPointer.current];
+      context.putImageData(imageData, 0, 0);
+    }
+    dispatch(actionItemClick(null));
+  }, [actionMenuItem, dispatch]);
 
-    // before browser pain
-    useLayoutEffect(() => {
-      if (!canvasRef.current) return;
-      const canvas = canvasRef.current;
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
 
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-
-      let ctx = canvas.getContext("2d");
-      let s = 90;
-
-      ctx.strokeStyle = "lightgrey";
-      ctx.beginPath();
-      for (var x = 0; x <= window.innerWidth; x += s) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, window.innerHeight);
+    const changeConfig = (color, size) => {
+      if (activeSubMenuItem === SUB_MENU_ITEMS.HIGHLIGHTER) {
+        context.strokeStyle = `${color}10`;
+      } else {
+        context.strokeStyle = color;
       }
-      for (var y = 0; y <= window.innerHeight; y += s) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(window.innerWidth, y);
+      context.globalCompositeOperation = "source-over";
+      if (activeSubMenuItem === SUB_MENU_ITEMS.ERASER) {
+        context.globalCompositeOperation = "destination-out";
       }
-      ctx.stroke();
-    }, []);
+      context.lineWidth = size;
+    };
 
-    useEffect(() => {
-        if (!canvasRef.current) return
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d')
+    const handleChangeConfig = (config) => {
+      changeConfig(config.color, config.size);
+    };
+    changeConfig(activeToolBoxItem?.color, activeToolBoxItem?.size);
+    socket.on("changeConfig", handleChangeConfig);
 
-        const beginPath = (x, y) => {
-            context.beginPath()
-            context.moveTo(x, y)
-        }
+    return () => {
+      socket.off("changeConfig", handleChangeConfig);
+    };
+  }, [activeToolBoxItem?.color, activeToolBoxItem?.size, activeSubMenuItem]);
 
-        const drawRect = (x, y) => {
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            const width = x - startX.current;
-            const height = y - startY.current;
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            context.putImageData(imageData,0,0);
-            context.beginPath();
-            context.strokeRect(startX.current, startY.current, width, height);
-            // context.stroke();
-        }
+  useEffect(() => {
+    if (!canvasRef.current) return;
 
-        const drawCircle = (x, y) => {
-            const radius = x - startX.current;
-            // context.arc(startX.current, startY.current, 30, 0, 2 * Math.PI);
-            context.arc(startX.current, startY.current, radius, 0, 2*Math.PI, false)
-            context.stroke();
-        }
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
 
-        const drawLine = (x, y) => {
-            context.globalAlpha = 0.2
-            if(activeSubMenuItem === SUB_MENU_ITEMS.PENCIL || activeSubMenuItem === SUB_MENU_ITEMS.ERASER){
-                context.lineTo(x, y);
-            } else if (activeSubMenuItem === SUB_MENU_ITEMS.HIGHLIGHTER) {
-                context.lineTo(x, y);
-            } else if(activeMenuItem === MENU_ITEMS.SQUARE) {
-                drawRect(x, y);
-                // context.strokeRect(x, y, 100, 100);
-            } else if(activeMenuItem === MENU_ITEMS.CIRCLE) {
-                drawCircle(x, y);
-            }
-            context.stroke();
-        }
+    if (activeSubMenuItem === SUB_MENU_ITEMS.HIGHLIGHTER) {
+      console.log("globalAlpha");
+      context.globalAlpha = 0.5;
+    } else {
+      context.globalAlpha = 1;
+    }
+  }, [activeSubMenuItem]);
 
-        const handleMouseDown = (e) => {
-            shouldDraw.current = true
-            startX.current = e.clientX - canvas.offsetLeft;;
-            startY.current = e.clientY - canvas.offsetTop;
-            beginPath(e.clientX, e.clientY);
-            socket.emit('beginPath', {x: e.clientX, y: e.clientY})
-        }
+  // before browser pain
+  useLayoutEffect(() => {
+    renderInitialBackStroke();
+  }, []);
 
-        const handleMouseMove = (e) => {
-            if (!shouldDraw.current) return
-            drawLine(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop, context)
-            socket.emit('drawLine', {x: e.clientX, y: e.clientY})
-        }
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
 
-        const handleMouseUp = (e) => {
-            shouldDraw.current = false
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-            drawHistory.current.push(imageData)
-            historyPointer.current = drawHistory.current.length - 1
-        }
+    const beginPath = (x, y) => {
+      context.beginPath();
+      context.moveTo(x, y);
+    };
 
-        const handleBeginPath = (path) => {
-            beginPath(path.x, path.y)
-        }
+    const drawRect = (x, y) => {
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const width = x - startX.current;
+      const height = y - startY.current;
+      //   context.clearRect(0, 0, canvas.width, canvas.height);
+      context.putImageData(imageData, 0, 0);
+      renderInitialBackStroke();
+      context.strokeStyle = "blue";
+      context.lineWidth = 10;
+      context.beginPath();
+      context.strokeRect(startX.current, startY.current, width, height);
+      redrawLocalRectangle(context);
+      redrawLocalCircle(context);
+      redrawLocalLine(context);
+      // context.stroke();
+    };
 
-        const handleDrawLine = (path) => {
-            drawLine(path.x, path.y, context);
-        }
+    const drawCircle = (x, y) => {
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      context.putImageData(imageData, 0, 0);
+      renderInitialBackStroke();
+      context.strokeStyle = "blue";
+      context.lineWidth = 10;
+      context.beginPath();
 
-        canvas.addEventListener('mousedown', handleMouseDown)
-        canvas.addEventListener('mousemove', handleMouseMove)
-        canvas.addEventListener('mouseup', handleMouseUp)
+      const radius = x - startX.current;
+      context.arc(
+        startX.current,
+        startY.current,
+        radius,
+        0,
+        2 * Math.PI,
+        false
+      );
+      context.stroke();
+      redrawLocalRectangle(context);
+      redrawLocalCircle(context);
+      redrawLocalLine(context);
+    };
 
-        socket.on('beginPath', handleBeginPath)
-        socket.on('drawLine', handleDrawLine)
+    const drawLine = (x, y) => {
+      context.globalAlpha = 0.2;
+      if (
+        activeSubMenuItem === SUB_MENU_ITEMS.PENCIL ||
+        activeSubMenuItem === SUB_MENU_ITEMS.ERASER
+      ) {
+        context.lineTo(x, y);
+      } else if (activeSubMenuItem === SUB_MENU_ITEMS.HIGHLIGHTER) {
+        context.lineTo(x, y);
+      } else if (activeMenuItem === MENU_ITEMS.SQUARE) {
+        drawRect(x, y);
+        // context.strokeRect(x, y, 100, 100);
+      } else if (activeMenuItem === MENU_ITEMS.CIRCLE) {
+        drawCircle(x, y);
+      }
+      context.stroke();
+    };
 
-        return () => {
-            canvas.removeEventListener('mousedown', handleMouseDown)
-            canvas.removeEventListener('mousemove', handleMouseMove)
-            canvas.removeEventListener('mouseup', handleMouseUp)
+    const handleMouseDown = (e) => {
+      shouldDraw.current = true;
+      startX.current = e.clientX - canvas.offsetLeft;
+      startY.current = e.clientY - canvas.offsetTop;
+      beginPath(e.clientX, e.clientY);
+      socket.emit("beginPath", { x: e.clientX, y: e.clientY });
+    };
 
-            socket.off('beginPath', handleBeginPath)
-            socket.off('drawLine', handleDrawLine)
-        }
-    }, [activeMenuItem, activeSubMenuItem]);
+    const handleMouseMove = (e) => {
+      if (!shouldDraw.current) return;
+      drawLine(
+        e.clientX - canvas.offsetLeft,
+        e.clientY - canvas.offsetTop,
+        context
+      );
+      socket.emit("drawLine", { x: e.clientX, y: e.clientY });
+    };
 
-    return (<canvas ref={canvasRef} className={classes.canvas}></canvas>
-    )
-}
+    const handleMouseUp = (e) => {
+      shouldDraw.current = false;
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      drawHistory.current.push(imageData);
+      historyPointer.current = drawHistory.current.length - 1;
+      pushDrawItem(e, canvas);
+    };
+
+    const handleBeginPath = (path) => {
+      beginPath(path.x, path.y);
+    };
+
+    const handleDrawLine = (path) => {
+      drawLine(path.x, path.y, context);
+    };
+
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseup", handleMouseUp);
+
+    socket.on("beginPath", handleBeginPath);
+    socket.on("drawLine", handleDrawLine);
+
+    return () => {
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("mouseup", handleMouseUp);
+
+      socket.off("beginPath", handleBeginPath);
+      socket.off("drawLine", handleDrawLine);
+    };
+  }, [activeMenuItem, activeSubMenuItem]);
+
+  return <canvas ref={canvasRef} className={classes.canvas}></canvas>;
+};
 
 export default Board;
